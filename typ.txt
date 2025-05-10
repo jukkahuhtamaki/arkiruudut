@@ -1,11 +1,3 @@
-[_polygon]
-Type=0x4b
-Xpm="0 0 1 0"
-"1 c FFFFFF00"
-BorderWidth=2
-BorderColor=FF0000
-[end]
-
 [_line]
 Type=0x01
 UseOrientation=N

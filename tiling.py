@@ -115,49 +115,49 @@ def OLD_shapes_to_osm(shapes, multi_grid, output_file="output.osm"):
     nodes = {}
 
     # Process Polygon and LineString shapes
-    
-    for shape in shapes:
-        if isinstance(shape, Polygon):
-            way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
-            for coord in shape.exterior.coords:
-                lat, lon = coord[1], coord[0]
-                node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
-                nodes[node_id] = node
-                etree.SubElement(way, "nd", ref=str(node_id))
-                node_id += 1
-            way_id += 1
-
-            for interior in shape.interiors:
-                for coord in interior.coords:
+    if shapes is not None:
+        for shape in shapes:
+            if isinstance(shape, Polygon):
+                way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
+                for coord in shape.exterior.coords:
                     lat, lon = coord[1], coord[0]
                     node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
                     nodes[node_id] = node
                     etree.SubElement(way, "nd", ref=str(node_id))
                     node_id += 1
-            way_id += 1
+                way_id += 1
 
-        elif isinstance(shape, LineString):
-            way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
-            for coord in shape.coords:
-                lat, lon = coord[1], coord[0]
-                node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
-                nodes[node_id] = node
-                etree.SubElement(way, "nd", ref=str(node_id))
-                node_id += 1
-            way_id += 1
+                for interior in shape.interiors:
+                    for coord in interior.coords:
+                        lat, lon = coord[1], coord[0]
+                        node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
+                        nodes[node_id] = node
+                        etree.SubElement(way, "nd", ref=str(node_id))
+                        node_id += 1
+                way_id += 1
+
+            elif isinstance(shape, LineString):
+                way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
+                for coord in shape.coords:
+                    lat, lon = coord[1], coord[0]
+                    node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
+                    nodes[node_id] = node
+                    etree.SubElement(way, "nd", ref=str(node_id))
+                    node_id += 1
+                way_id += 1
     
-    
-    # ✅ Process MultiLineString (Grid Lines)
-    if isinstance(multi_grid, MultiLineString):
-        for line in multi_grid.geoms:
-            way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
-            for coord in line.coords:
-                lat, lon = coord[1], coord[0]
-                node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
-                nodes[node_id] = node
-                etree.SubElement(way, "nd", ref=str(node_id))
-                node_id += 1
-            way_id += 1
+    if multi_grid is not None:
+        # ✅ Process MultiLineString (Grid Lines)
+        if isinstance(multi_grid, MultiLineString):
+            for line in multi_grid.geoms:
+                way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
+                for coord in line.coords:
+                    lat, lon = coord[1], coord[0]
+                    node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
+                    nodes[node_id] = node
+                    etree.SubElement(way, "nd", ref=str(node_id))
+                    node_id += 1
+                way_id += 1
     
 
     # Save to file
@@ -201,36 +201,71 @@ def create_tile_grid(minx, miny, maxx, maxy, zoom=14):
 
 def geometry_to_kml(shapes, multi_grid, output_file="output.kml"):
     kml = simplekml.Kml()
-    for shape in shapes:
-        if isinstance(shape, Polygon):  
-            # Add polygon with outer boundary
-            poly = kml.newpolygon(outerboundaryis=list(shape.exterior.coords))
+    if shapes is not None:
+        for shape in shapes:
+            if isinstance(shape, Polygon):  
+                # Add polygon with outer boundary
+                poly = kml.newpolygon(outerboundaryis=list(shape.exterior.coords))
 
-            # Add ALL inner boundaries (holes)
-            poly.innerboundaryis = [list(interior.coords) for interior in shape.interiors]
-            
-        elif isinstance(shape, MultiLineString):  
-            for line in geom.geoms:
-                kml.newlinestring(coords=list(line.coords))
+                # Add ALL inner boundaries (holes)
+                poly.innerboundaryis = [list(interior.coords) for interior in shape.interiors]
+                
+            elif isinstance(shape, MultiLineString):
+                for line in shape.geoms:
+                    kml.newlinestring(coords=list(line.coords))
 
-        elif isinstance(shape, LineString):  
-            kml.newlinestring(coords=list(geom.coords))
+            elif isinstance(shape, LineString):  
+                kml.newlinestring(coords=list(shape.coords))
 
     # add the multigrid
-    if isinstance(multi_grid, MultiLineString):
-        for line in multi_grid.geoms:  # Iterate through each LineString in MultiLineString
-            kml.newlinestring(coords=list(line.coords))
+    if multi_grid is not None:
+        if isinstance(multi_grid, MultiLineString):
+            for line in multi_grid.geoms:  # Iterate through each LineString in MultiLineString
+                kml.newlinestring(coords=list(line.coords))
 
     kml.save(output_file)
     print(f"KML saved as {output_file}")
 
 #------------------------------
 
+def round_bbox_to_zoom(bbox, zoom):
+    """
+    Expands a bounding box (xmin, ymin, xmax, ymax) outward to align with OSM tiles at a given zoom level.
+    
+    Parameters:
+        bbox: tuple (min_lon, min_lat, max_lon, max_lat)
+        zoom: int (target OSM zoom level)
+
+    Returns:
+        rounded_bbox: tuple (rounded_min_lon, rounded_min_lat, rounded_max_lon, rounded_max_lat)
+    """
+    min_lon, min_lat, max_lon, max_lat = bbox
+
+    # Get tile indices for bounding box corners
+    min_tile = mercantile.tile(min_lon, min_lat, zoom)
+    max_tile = mercantile.tile(max_lon, max_lat, zoom)
+
+    # Expand tiles to cover full bounding box
+    rounded_min_lon, rounded_min_lat = mercantile.bounds(min_tile.x, min_tile.y, zoom)[:2]
+    rounded_max_lon, rounded_max_lat = mercantile.bounds(max_tile.x + 1, max_tile.y + 1, zoom)[2:]
+
+    return [rounded_min_lon, rounded_min_lat, rounded_max_lon, rounded_max_lat]
+
+# ---------------------------------------------
+
+
 #kml_file='polygon04.kml'
 #bounding_box = [2.0, 39, 3.6, 40]
 
+# select the zoom level (14 isot ruudut, 17 pikkuruudt)
+zoom_level = 17
+
 kml_file='squadrats-2025-05-10.kml'
-bounding_box = [23.55,61.4, 23.92, 61.55]
+bounding_box = [23.3,61.31, 24.24, 61.6]
+
+bouding_box = round_bbox_to_zoom(bounding_box, zoom_level)
+
+
 #bounding_box = [0,0, 90, 90]
 
 # testi sisäkkäisille reikäisille alueille
@@ -241,22 +276,12 @@ bounding_box = [23.55,61.4, 23.92, 61.55]
 print("parsitaan kml alueisiin")
 shapes = kml_to_shapes(kml_file)
 
-print("leikataan alueet bounding boxilla")
-bounding_shape = box(*bounding_box)
-
-#new_shapes = []
-#for shape in shapes:
-#    if bounding_shape.contains(shape):
-#        new_shapes.append(shape)
-#    else:
-#        new_shapes.append(bounding_shape.intersection(shape))
 
 new_shapes = shapes
 
 
 # Generate grid lines
 grid_lines = []
-step = .1  # Grid spacing
 minx=bounding_box[0]
 maxx=bounding_box[2]
 miny=bounding_box[1]
@@ -265,7 +290,7 @@ maxy=bounding_box[3]
 
 
 print("gridviivaston luonti")
-multi_grid = create_tile_grid(minx, miny, maxx, maxy, zoom=10)
+multi_grid = create_tile_grid(minx, miny, maxx, maxy, zoom=zoom_level)
 
 # vähennetään käydyt alueet gridiviivastosta
 print(f"leikataan gridiviivat: {len(shapes)} leikkausta")
@@ -281,8 +306,34 @@ print("Leikataan gridiviivat yhdellä operaatiolla")
 multi_grid = multi_grid.difference(merged_shapes)
 
 
+def polygon_to_multilinestring(polygon):
+    # Extract exterior and interior boundaries
+    lines = [polygon.exterior] + list(polygon.interiors)
+    # Convert to MultiLineString
+    multilinestring = MultiLineString(lines)
+    return multilinestring
+
+print("leikataan alueet bounding boxilla")
+bounding_shape = box(*bounding_box)
+shapes = [bounding_shape.intersection(polygon_to_multilinestring(x)) for x in shapes]
+multi_grid = multi_grid.intersection(bounding_shape)
+
+pdb.set_trace()
+
+# poistetaan tyhjät elementit shapes listalta
+shapes = [x for x in shapes if not x.is_empty]
+linelist = []
+for shape in shapes:
+    if isinstance(shape,LineString):
+        linelist.append(shape)
+    if isinstance(shape,MultiLineString):
+        linelist.extend(list(shape.geoms))
+
+shapes = linelist
+
 
 print("kasataan KML file")
+#geometry_to_kml(shapes, multi_grid, output_file="output.kml")
 geometry_to_kml(shapes, multi_grid, output_file="output.kml")
 
 print("kasataan OSM file")
@@ -293,7 +344,7 @@ shapes_to_osm(shapes, multi_grid)
 """
 gpsbabel -i kml -f output.kml -o osm,tag=highway:primary -F missing_tiles.osm
 
-mkgmap --mapname-format="p20" --polygon-size-limits=0:1 -c config.txt typ.txt missing_tiles.osm 
+mkgmap -c config.txt typ.txt missing_tiles.osm 
 
 java -jar /usr/share/mkgmap/mkgmap.jar --keep-going --verbose --debug --log-level=DEBUG -c config.txt typ.txt missing_tiles.osm 
 
