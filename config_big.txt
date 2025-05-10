@@ -1,0 +1,9 @@
+family-id: 67
+product-id: 1
+latin1
+description: unexplored BIG tiles
+draw-priority: 100
+style-file: mkgmap.style
+transparent
+gmapsupp
+output-dir=output_big

@@ -4,15 +4,16 @@ from lxml import etree
 from shapely.geometry import Polygon, MultiLineString, LineString
 from shapely.geometry import shape
 from shapely.geometry import box
-from kml2geojson import convert
+#from kml2geojson import convert
 import matplotlib.pyplot as plt
 import mercantile
 import simplekml
 from shapely.ops import unary_union
+from math import cos, radians
 
 # -----------------------------------
 
-def kml_to_shapes(kml_file):
+def kml_to_shapes(kml_file, zoom_level):
     # Read KML as XML
     tree = etree.parse(kml_file)
     root = tree.getroot()
@@ -22,7 +23,17 @@ def kml_to_shapes(kml_file):
 
     polygon_storage = []
 
+
     for pm in placemarks:
+
+        name = pm.find(".//{http://www.opengis.net/kml/2.2}name").text
+
+        if not (
+                (zoom_level == 14 and name == 'squadrats') 
+                or 
+                (zoom_level == 17 and name == 'squadratinhos')):
+            continue
+
         # find the polygons
         polygons = pm.findall(".//{http://www.opengis.net/kml/2.2}Polygon")
         for polygon in polygons:
@@ -49,7 +60,9 @@ def kml_to_shapes(kml_file):
 
 # --------------------------
 
-def shapes_to_osm(shapes, multi_grid, output_file="output.osm"):
+# TÄTÄ EI NYT OIKEASTAAN TARVITA MIHINKÄÄN
+
+def shapes_to_osm(shapes, multi_grid, output_file):
     osm = etree.Element("osm", version="0.6", generator="Python")
     
     node_id = 1
@@ -89,7 +102,7 @@ def shapes_to_osm(shapes, multi_grid, output_file="output.osm"):
                 etree.SubElement(way, "nd", ref=str(node_ref))
             way_id += 1
     
-    # ✅ Process MultiLineString (Grid Lines)
+    # Process MultiLineString (Grid Lines)
     if isinstance(multi_grid, MultiLineString):
         for line in multi_grid.geoms:
             way = etree.SubElement(osm, "way", id=str(way_id), version="1")
@@ -100,74 +113,18 @@ def shapes_to_osm(shapes, multi_grid, output_file="output.osm"):
     
     # Save to file
     tree = etree.ElementTree(osm)
-    tree.write(output_file, encoding="utf-8", xml_declaration=True)
-    print(f"OSM file saved as {output_file}")
-
-
-
-###############
-
-def OLD_shapes_to_osm(shapes, multi_grid, output_file="output.osm"):
-    osm = etree.Element("osm", version="0.6", generator="Python")
-
-    node_id = 1
-    way_id = 1
-    nodes = {}
-
-    # Process Polygon and LineString shapes
-    if shapes is not None:
-        for shape in shapes:
-            if isinstance(shape, Polygon):
-                way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
-                for coord in shape.exterior.coords:
-                    lat, lon = coord[1], coord[0]
-                    node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
-                    nodes[node_id] = node
-                    etree.SubElement(way, "nd", ref=str(node_id))
-                    node_id += 1
-                way_id += 1
-
-                for interior in shape.interiors:
-                    for coord in interior.coords:
-                        lat, lon = coord[1], coord[0]
-                        node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
-                        nodes[node_id] = node
-                        etree.SubElement(way, "nd", ref=str(node_id))
-                        node_id += 1
-                way_id += 1
-
-            elif isinstance(shape, LineString):
-                way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
-                for coord in shape.coords:
-                    lat, lon = coord[1], coord[0]
-                    node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
-                    nodes[node_id] = node
-                    etree.SubElement(way, "nd", ref=str(node_id))
-                    node_id += 1
-                way_id += 1
-    
-    if multi_grid is not None:
-        # ✅ Process MultiLineString (Grid Lines)
-        if isinstance(multi_grid, MultiLineString):
-            for line in multi_grid.geoms:
-                way = etree.SubElement(osm, "way", id=str(way_id), version="1")  # 🔹 Added version="1"
-                for coord in line.coords:
-                    lat, lon = coord[1], coord[0]
-                    node = etree.SubElement(osm, "node", id=str(node_id), lat=str(lat), lon=str(lon), version="1")  # 🔹 Added version="1"
-                    nodes[node_id] = node
-                    etree.SubElement(way, "nd", ref=str(node_id))
-                    node_id += 1
-                way_id += 1
-    
-
-    # Save to file
-    tree = etree.ElementTree(osm)
-    tree.write(output_file, encoding="utf-8", xml_declaration=True)
-    print(f"OSM file saved as {output_file}")
+    tree.write(output_file+'.osm', encoding="utf-8", xml_declaration=True)
+    print(f"OSM file saved as {output_file}.osm")
 
 # -----------------------------------    
 
-def create_tile_grid(minx, miny, maxx, maxy, zoom=14):
+def create_tile_grid(bounding_box, zoom):
+
+    minx=bounding_box[0]
+    maxx=bounding_box[2]
+    miny=bounding_box[1]
+    maxy=bounding_box[3]
+
     grid_lines = []
 
     # Get tile coordinates for bounding box
@@ -199,7 +156,7 @@ def create_tile_grid(minx, miny, maxx, maxy, zoom=14):
 
 # --------------------------
 
-def geometry_to_kml(shapes, multi_grid, output_file="output.kml"):
+def geometry_to_kml(shapes, multi_grid, output_file):
     kml = simplekml.Kml()
     if shapes is not None:
         for shape in shapes:
@@ -223,141 +180,156 @@ def geometry_to_kml(shapes, multi_grid, output_file="output.kml"):
             for line in multi_grid.geoms:  # Iterate through each LineString in MultiLineString
                 kml.newlinestring(coords=list(line.coords))
 
-    kml.save(output_file)
+    kml.save(output_file+'.kml')
     print(f"KML saved as {output_file}")
 
 #------------------------------
+def km_to_degrees(km, lat):
+    """Convert kilometers to degrees of latitude/longitude at a given latitude."""
+    earth_radius_km = 6371  # Earth radius in kilometers
+    deg_per_km_lat = 1 / (earth_radius_km * (2 * 3.141592653589793 / 360))  # Approx. degrees per km latitude
+    deg_per_km_lon = deg_per_km_lat / cos(radians(lat))  # Adjust longitude based on latitude
 
-def round_bbox_to_zoom(bbox, zoom):
+    return km * deg_per_km_lat, km * deg_per_km_lon
+
+#------------------------------
+
+def round_bbox_to_osm_tiles(center_lon, center_lat, h_distance_km, v_distance_km, zoom):
     """
-    Expands a bounding box (xmin, ymin, xmax, ymax) outward to align with OSM tiles at a given zoom level.
+    Expands a bounding box centered at (lat, lon) to fit OSM tiles at a given zoom level,
+    using distances provided in kilometers.
     
     Parameters:
-        bbox: tuple (min_lon, min_lat, max_lon, max_lat)
-        zoom: int (target OSM zoom level)
+        center_lat (float): Latitude of the center point.
+        center_lon (float): Longitude of the center point.
+        h_distance_km (float): Horizontal distance in km from the center.
+        v_distance_km (float): Vertical distance in km from the center.
+        zoom (int): Target OSM zoom level.
 
     Returns:
-        rounded_bbox: tuple (rounded_min_lon, rounded_min_lat, rounded_max_lon, rounded_max_lat)
+        rounded_bbox (tuple): (rounded_min_lon, rounded_min_lat, rounded_max_lon, rounded_max_lat)
     """
-    min_lon, min_lat, max_lon, max_lat = bbox
 
-    # Get tile indices for bounding box corners
+    # Convert distances to degrees
+    v_distance_deg, h_distance_deg = km_to_degrees(v_distance_km, center_lat), km_to_degrees(h_distance_km, center_lat)
+
+    # Compute initial bounding box
+    min_lon, min_lat = center_lon - h_distance_deg[1], center_lat - v_distance_deg[0]
+    max_lon, max_lat = center_lon + h_distance_deg[1], center_lat + v_distance_deg[0]
+
+    # Get tile indices for bounding box corners at the given zoom level
     min_tile = mercantile.tile(min_lon, min_lat, zoom)
     max_tile = mercantile.tile(max_lon, max_lat, zoom)
 
-    # Expand tiles to cover full bounding box
+    # Expand tiles to fully cover the bounding box
     rounded_min_lon, rounded_min_lat = mercantile.bounds(min_tile.x, min_tile.y, zoom)[:2]
     rounded_max_lon, rounded_max_lat = mercantile.bounds(max_tile.x + 1, max_tile.y + 1, zoom)[2:]
 
-    return [rounded_min_lon, rounded_min_lat, rounded_max_lon, rounded_max_lat]
+    return rounded_min_lon, rounded_min_lat, rounded_max_lon, rounded_max_lat
 
-# ---------------------------------------------
+# ---------------------------
+def main(kml_file, zoom_level, center_point, extending_km, output_file_name):
+    # -----------------------------------
+    #kml_file='polygon04.kml'
+    #bounding_box = [2.0, 39, 3.6, 40]
 
-
-#kml_file='polygon04.kml'
-#bounding_box = [2.0, 39, 3.6, 40]
-
-# select the zoom level (14 isot ruudut, 17 pikkuruudt)
-zoom_level = 17
-
-kml_file='squadrats-2025-05-10.kml'
-bounding_box = [23.3,61.31, 24.24, 61.6]
-
-bouding_box = round_bbox_to_zoom(bounding_box, zoom_level)
+    # select the zoom level (14 isot ruudut, 17 pikkuruudt)
 
 
-#bounding_box = [0,0, 90, 90]
+    # laskentaa bounding boxit
 
-# testi sisäkkäisille reikäisille alueille
-#kml_file='nested_area_test.kml'
-#bounding_box = [18,58,42,82]
+    bounding_box = round_bbox_to_osm_tiles(
+            center_point[0], center_point[1], 
+            extending_km, extending_km, 14)
 
+    
 
-print("parsitaan kml alueisiin")
-shapes = kml_to_shapes(kml_file)
+    print("parsitaan kml alueisiin")
+    shapes = kml_to_shapes(kml_file, zoom_level)
+    
+    # Generate grid lines
+    print("gridviivaston luonti")
+    multi_grid = create_tile_grid(bounding_box, zoom=zoom_level)
+    
+    
+    # Optimized: Union all shapes first
+    print(f"Kasataan {len(shapes)} aluetta yhdeksi leikkausgeometriaksi")
+    merged_shapes = unary_union(shapes)  # Combine all shapes into one
+    
+    # 🔥 Perform difference in one step
+    print("Leikataan gridiviivat yhdellä operaatiolla")
+    multi_grid = multi_grid.difference(merged_shapes)
+    
 
+    def polygon_to_multilinestring(polygon):
+        # Extract exterior and interior boundaries
+        lines = [polygon.exterior] + list(polygon.interiors)
+        # Convert to MultiLineString
+        multilinestring = MultiLineString(lines)
+        return multilinestring
 
-new_shapes = shapes
+    print("leikataan alueet bounding boxilla")
+    bounding_shape = box(*bounding_box)
+    shapes = [bounding_shape.intersection(polygon_to_multilinestring(x)) for x in shapes]
+    multi_grid = multi_grid.intersection(bounding_shape)
 
+    # poistetaan tyhjät elementit shapes listalta
+    shapes = [x for x in shapes if not x.is_empty]
+    linelist = []
+    for shape in shapes:
+        if isinstance(shape,LineString):
+            linelist.append(shape)
+        if isinstance(shape,MultiLineString):
+            linelist.extend(list(shape.geoms))
 
-# Generate grid lines
-grid_lines = []
-minx=bounding_box[0]
-maxx=bounding_box[2]
-miny=bounding_box[1]
-maxy=bounding_box[3]
+    shapes = linelist
 
+    print("kasataan KML file")
+    #geometry_to_kml(shapes, multi_grid, output_file="output.kml")
+    geometry_to_kml(shapes, multi_grid, output_file=output_file_name)
 
-
-print("gridviivaston luonti")
-multi_grid = create_tile_grid(minx, miny, maxx, maxy, zoom=zoom_level)
-
-# vähennetään käydyt alueet gridiviivastosta
-print(f"leikataan gridiviivat: {len(shapes)} leikkausta")
-#for shape in shapes:
-#    multi_grid = multi_grid.difference(shape) 
-
-# 🔥 Optimized: Union all shapes first
-print(f"Kasataan {len(shapes)} aluetta yhdeksi leikkausgeometriaksi")
-merged_shapes = unary_union(shapes)  # Combine all shapes into one
-
-# 🔥 Perform difference in one step
-print("Leikataan gridiviivat yhdellä operaatiolla")
-multi_grid = multi_grid.difference(merged_shapes)
-
-
-def polygon_to_multilinestring(polygon):
-    # Extract exterior and interior boundaries
-    lines = [polygon.exterior] + list(polygon.interiors)
-    # Convert to MultiLineString
-    multilinestring = MultiLineString(lines)
-    return multilinestring
-
-print("leikataan alueet bounding boxilla")
-bounding_shape = box(*bounding_box)
-shapes = [bounding_shape.intersection(polygon_to_multilinestring(x)) for x in shapes]
-multi_grid = multi_grid.intersection(bounding_shape)
-
-pdb.set_trace()
-
-# poistetaan tyhjät elementit shapes listalta
-shapes = [x for x in shapes if not x.is_empty]
-linelist = []
-for shape in shapes:
-    if isinstance(shape,LineString):
-        linelist.append(shape)
-    if isinstance(shape,MultiLineString):
-        linelist.extend(list(shape.geoms))
-
-shapes = linelist
-
-
-print("kasataan KML file")
-#geometry_to_kml(shapes, multi_grid, output_file="output.kml")
-geometry_to_kml(shapes, multi_grid, output_file="output.kml")
-
-print("kasataan OSM file")
-shapes_to_osm(shapes, multi_grid)
-
-
-
-"""
-gpsbabel -i kml -f output.kml -o osm,tag=highway:primary -F missing_tiles.osm
-
-mkgmap -c config.txt typ.txt missing_tiles.osm 
-
-java -jar /usr/share/mkgmap/mkgmap.jar --keep-going --verbose --debug --log-level=DEBUG -c config.txt typ.txt missing_tiles.osm 
-
-
-echo "# arkiruudut" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-git remote add origin git@github.com:Myrtillus/arkiruudut.git
-git push -u origin main
+    #print("kasataan OSM file")
+    #shapes_to_osm(shapes, multi_grid, output_file_name)
 
 
 
 
-"""
+# ---------------------------
+if __name__ == "__main__":
+
+    kml_file='squadrats-2025-05-10.kml'
+
+    center_point = [23.7636959, 61.4979306]
+    small_extending_km = 20
+    big_extending_km = 100
+
+    small_output_file_name = 'small_output'
+    big_output_file_name = 'big_output'
+
+    # pikkuruutujen laskenta
+    main(kml_file, 17, center_point, small_extending_km, small_output_file_name)
+    
+    # isojen ruutujen laskenta
+    main(kml_file, 14, center_point, big_extending_km, big_output_file_name)
+    
+    """
+
+    KML tiedostosta eteenpäin kohden Garmin IMG filettä
+    
+    # KML => OSM tiedostoksi
+    gpsbabel -i kml -f small_output.kml -o osm,tag=highway:primary -F small_missing_tiles.osm
+    gpsbabel -i kml -f big_output.kml -o osm,tag=highway:primary -F big_missing_tiles.osm
+
+    # OSM => Garmin IMG file
+    mkgmap -c config_small.txt typ.txt small_missing_tiles.osm 
+    mkgmap -c config_big.txt typ.txt big_missing_tiles.osm 
+
+    Hakemistoihin output_small ja output_big tulee gmapsupp.img niminen file
+    - nimeä uudelleen  ===>>> STOP EI SAA TEHDÄ!!!!!!!
+    - siirrä gepsille
+    
+
+    hmmmm. nyt haasteena se, että tiedoston pitää olla nimeltään gmapsupp.img, jotta se näkyy garminin karttavalikolla
+    
+    """
+

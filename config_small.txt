@@ -1,0 +1,13 @@
+family-id: 66
+product-id: 1
+latin1
+description: unexplored SMALL tiles
+draw-priority: 100
+style-file: mkgmap.style
+transparent
+gmapsupp
+output-dir=output_small
+
+
+
+
