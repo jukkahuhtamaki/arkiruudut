@@ -30,6 +30,7 @@ def kml_to_shapes(kml_file):
 
             outer_boundary = polygon.find(".//{http://www.opengis.net/kml/2.2}outerBoundaryIs")
             ob_coordinates = outer_boundary.find(".//{http://www.opengis.net/kml/2.2}coordinates")
+
             ob_coordinates = [x.strip() for x in ob_coordinates.text.split(' ') if x]
             ob_coordinates = [[float(y) for y in x.split(',')] for x in ob_coordinates]
 
@@ -232,6 +233,11 @@ kml_file='squadrats-2025-05-10.kml'
 bounding_box = [23.55,61.4, 23.92, 61.55]
 #bounding_box = [0,0, 90, 90]
 
+# testi sisäkkäisille reikäisille alueille
+#kml_file='nested_area_test.kml'
+#bounding_box = [18,58,42,82]
+
+
 print("parsitaan kml alueisiin")
 shapes = kml_to_shapes(kml_file)
 
@@ -259,7 +265,7 @@ maxy=bounding_box[3]
 
 
 print("gridviivaston luonti")
-multi_grid = create_tile_grid(minx, miny, maxx, maxy, zoom=17)
+multi_grid = create_tile_grid(minx, miny, maxx, maxy, zoom=10)
 
 # vähennetään käydyt alueet gridiviivastosta
 print(f"leikataan gridiviivat: {len(shapes)} leikkausta")
