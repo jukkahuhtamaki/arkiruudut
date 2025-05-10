@@ -289,42 +289,18 @@ gpsbabel -i kml -f output.kml -o osm,tag=highway:primary -F missing_tiles.osm
 
 mkgmap --mapname-format="p20" --polygon-size-limits=0:1 -c config.txt typ.txt missing_tiles.osm 
 
-java -jar /usr/share/mkgmap/mkgmap.jar --keep-going --verbose --debug -c config.txt typ.txt missing_tiles.osm 
+java -jar /usr/share/mkgmap/mkgmap.jar --keep-going --verbose --debug --log-level=DEBUG -c config.txt typ.txt missing_tiles.osm 
+
+
+echo "# arkiruudut" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin git@github.com:Myrtillus/arkiruudut.git
+git push -u origin main
+
 
 
 
 """
-sys.exit()
-pdb.set_trace()
-
-
-
-print("piirretään kuva")
-# Plot the result
-fig, ax = plt.subplots()
-
-for shape in new_shapes:
-    x1, y1 = shape.exterior.xy
-    ax.plot(x1, y1, color="black", linewidth=2)  # Plot main polygon outline
-    for hole in shape.interiors:
-        x, y = hole.xy
-        ax.plot(x, y, color="black", linewidth=2)  # Plot holes
-
-
-
-
-for line in multi_grid.geoms:
-    x, y = line.xy
-    ax.plot(x, y, color="blue", linestyle="solid", linewidth=.5)  # Grid lines visible through holes & outside
-
-#plt.axis("equal")
-plt.savefig("grid_plot.png")
-
-# read the kml file in to shapes
-
-
-# sort the elements
-
-
-# find out shapes that intersect with the bounding box
-# create the bounding box shape from the bounding box coordinates
