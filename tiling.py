@@ -10,6 +10,8 @@ import mercantile
 import simplekml
 from shapely.ops import unary_union
 from math import cos, radians
+import subprocess
+import random
 
 # -----------------------------------
 
@@ -299,7 +301,9 @@ if __name__ == "__main__":
 
     kml_file='squadrats-2025-05-10.kml'
 
-    center_point = [23.7636959, 61.4979306]
+    #center_point = [23.7636959, 61.4979306]  # Tampere
+    center_point = [24.9060031, 60.2411758]  # Helsinki
+    
     small_extending_km = 20
     big_extending_km = 100
 
@@ -311,7 +315,91 @@ if __name__ == "__main__":
     
     # isojen ruutujen laskenta
     main(kml_file, 14, center_point, big_extending_km, big_output_file_name)
-    
+
+    ##########################3
+    # KML => OSM
+    ##########################3
+
+    # ajetaan gpsbabelilla KML tiedoston muunnos OSM fileeksi
+    result = subprocess.run(["gpsbabel", 
+                            "-i"
+                            "kml",
+                            "-f",
+                            "small_output.kml",
+                            "-o",
+                            "osm,tag=highway:primary",
+                            "-F",
+                            "small_missing_tiles.osm"
+                            ], capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+    # ajetaan gpsbabelilla KML tiedoston muunnos OSM fileeksi
+    result = subprocess.run(["gpsbabel", 
+                            "-i"
+                            "kml",
+                            "-f",
+                            "big_output.kml",
+                            "-o",
+                            "osm,tag=highway:primary",
+                            "-F",
+                            "big_missing_tiles.osm"
+                            ], capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+
+
+
+    ##########################3
+    # garmin tiedoston luonti
+    ##########################3
+
+    # luodaan garmin img fileet mkgmap:lla
+    # arvotaan mapname jokaiselle kartalle
+    mapname_small = str(random.randint(1000000, 9999999)+40000000)
+    mapname_big = str(random.randint(1000000, 9999999)+50000000)
+
+    result = subprocess.run(['mkgmap', 
+                            '--read-config=config.txt',
+                            f'--mapname={mapname_small}',
+                            '--description=SMALL_tiles',
+                            'typ.txt',
+                            'small_missing_tiles.osm'
+                            ], capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+
+    result = subprocess.run(['mv', 
+                            'output/gmapsupp.img',
+                            'output/gmapsupp-small.img',
+                            ], capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+
+    result = subprocess.run(['mkgmap', 
+                            '--read-config=config.txt',
+                            f'--mapname={mapname_big}',
+                            '--description=BIG_tiles',
+                            'typ.txt',
+                            'big_missing_tiles.osm'
+                            ], capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+    result = subprocess.run(['mv', 
+                            'output/gmapsupp.img',
+                            'output/gmapsupp-big.img',
+                            ], capture_output=True, text=True)
+    print(result.stdout)
+    print(result.stderr)
+
+    #mkgmap -c config.txt --mapname=49847386 --description="SMALL_tiles" typ.txt small_missing_tiles.osm 
+    #mv output/gmapsupp.img output/gmapsupp-small.img
+
+
     """
 
     KML tiedostosta eteenpäin kohden Garmin IMG filettä
@@ -321,8 +409,16 @@ if __name__ == "__main__":
     gpsbabel -i kml -f big_output.kml -o osm,tag=highway:primary -F big_missing_tiles.osm
 
     # OSM => Garmin IMG file
-    mkgmap -c config_small.txt typ.txt small_missing_tiles.osm 
-    mkgmap -c config_big.txt typ.txt big_missing_tiles.osm 
+
+    mkgmap --read-config=config.txt --mapname=49847386 --description="SMALL_tiles" typ.txt small_missing_tiles.osm 
+    mv output/gmapsupp.img output/gmapsupp-small.img
+    
+    mkgmap -c config.txt --mapname=59847386 --description="BIG_tiles" typ.txt big_missing_tiles.osm 
+    mv output/gmapsupp.img output/gmapsupp-big.img
+
+
+    
+
 
     Hakemistoihin output_small ja output_big tulee gmapsupp.img niminen file
     - nimeä uudelleen  ===>>> STOP EI SAA TEHDÄ!!!!!!!
@@ -331,5 +427,33 @@ if __name__ == "__main__":
 
     hmmmm. nyt haasteena se, että tiedoston pitää olla nimeltään gmapsupp.img, jotta se näkyy garminin karttavalikolla
     
+
+
+    
+    # GIT hubiin painaminen
+
+    eval "$(ssh-agent -s)"
+    ssh-add ~/.ssh/myrtillus_chromebook_github
+    git push --set-upstream origin main
+
+    
+    Kysymykset:
+    - jos gmapsupp.img fileen nimeää joksikin muuksi, niin kartta ei suostu näkymään garminin karttavalikossa
+    - description näkyy oikein karttavalikossa, kun file on gmapsupp.img
+
+    - Kuinka saadaan näkymään useampi samaa asiaa esittämä img tiedosto samanaikaiseksi edellyttäen tietysti, että img fileet on nimetty yksilöllisesti Garmin hakemistossa.
+
+    
+
+    mkgmap optioista:
+    --mapname=name
+    Set the name of the map. Garmin maps are identified by an 8 digit number.
+    The default is 63240001. It is best to use a different name if you are
+    going to be making a map for others to use so that it is unique and does
+    not clash with others.
+
+    - tiililaji: 4 pieni, 5 iso
+    - random 7 digittiä arpomalla
+
     """
 
