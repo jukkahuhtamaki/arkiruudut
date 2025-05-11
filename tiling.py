@@ -232,13 +232,8 @@ def round_bbox_to_osm_tiles(center_lon, center_lat, h_distance_km, v_distance_km
 # ---------------------------
 def main(kml_file, zoom_level, center_point, extending_km, output_file_name):
     # -----------------------------------
-    #kml_file='polygon04.kml'
-    #bounding_box = [2.0, 39, 3.6, 40]
 
-    # select the zoom level (14 isot ruudut, 17 pikkuruudt)
-
-
-    # laskentaa bounding boxit
+    # lasketaan bounding boxit
 
     bounding_box = round_bbox_to_osm_tiles(
             center_point[0], center_point[1], 
@@ -299,10 +294,11 @@ def main(kml_file, zoom_level, center_point, extending_km, output_file_name):
 # ---------------------------
 if __name__ == "__main__":
 
+
     kml_file='squadrats-2025-05-10.kml'
 
-    #center_point = [23.7636959, 61.4979306]  # Tampere
-    center_point = [24.9060031, 60.2411758]  # Helsinki
+    center_point = [23.7636959, 61.4979306]  # Tampere
+    #center_point = [24.9060031, 60.2411758]  # Helsinki
     
     small_extending_km = 20
     big_extending_km = 100
@@ -419,41 +415,6 @@ if __name__ == "__main__":
 
     
 
-
-    Hakemistoihin output_small ja output_big tulee gmapsupp.img niminen file
-    - nimeä uudelleen  ===>>> STOP EI SAA TEHDÄ!!!!!!!
-    - siirrä gepsille
-    
-
-    hmmmm. nyt haasteena se, että tiedoston pitää olla nimeltään gmapsupp.img, jotta se näkyy garminin karttavalikolla
-    
-
-
-    
-    # GIT hubiin painaminen
-
-    eval "$(ssh-agent -s)"
-    ssh-add ~/.ssh/myrtillus_chromebook_github
-    git push --set-upstream origin main
-
-    
-    Kysymykset:
-    - jos gmapsupp.img fileen nimeää joksikin muuksi, niin kartta ei suostu näkymään garminin karttavalikossa
-    - description näkyy oikein karttavalikossa, kun file on gmapsupp.img
-
-    - Kuinka saadaan näkymään useampi samaa asiaa esittämä img tiedosto samanaikaiseksi edellyttäen tietysti, että img fileet on nimetty yksilöllisesti Garmin hakemistossa.
-
-    
-
-    mkgmap optioista:
-    --mapname=name
-    Set the name of the map. Garmin maps are identified by an 8 digit number.
-    The default is 63240001. It is best to use a different name if you are
-    going to be making a map for others to use so that it is unique and does
-    not clash with others.
-
-    - tiililaji: 4 pieni, 5 iso
-    - random 7 digittiä arpomalla
 
     """
 
