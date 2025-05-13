@@ -62,7 +62,8 @@ def kml_to_shapes(kml_file, zoom_level):
 
 # --------------------------
 
-# TÄTÄ EI NYT OIKEASTAAN TARVITA MIHINKÄÄN
+# TÄTÄ EI NYT OIKEASTAAN TARVITA MIHINKÄÄN, KOSKA TÄMÄ EI KUITENKAAN KELPAA
+# SELLAISENAAN MKGMAP SOFTALLE.
 
 def shapes_to_osm(shapes, multi_grid, output_file):
     osm = etree.Element("osm", version="0.6", generator="Python")
@@ -295,9 +296,9 @@ def main(kml_file, zoom_level, center_point, extending_km, output_file_name):
 if __name__ == "__main__":
 
 
-    kml_file='squadrats-2025-05-10.kml'
+    kml_file='squadrats.kml'
 
-    center_point = [23.7636959, 61.4979306]  # Tampere
+    center_point = [23.7636959, 61.5]  # Tampere
     #center_point = [24.9060031, 60.2411758]  # Helsinki
     
     small_extending_km = 20
