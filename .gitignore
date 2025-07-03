@@ -1,0 +1,8 @@
+mkgmap-r4923/
+output/
+big_missing_tiles.osm
+big_output.kml
+small_missing_tiles.osm
+small_output.kml
+squadrats.kml
+.DS_Store
